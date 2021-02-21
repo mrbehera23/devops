@@ -1,0 +1,73 @@
+from googleapiclient.discovery import build
+import os
+
+# Dict Validation 
+def dict_fun(input_dict,actual_data):
+    for i in input_dict:
+        if(type(input_dict[i])==dict):            
+            dict_fun(input_dict[i],actual_data[i])
+        if(type(input_dict[i])!=dict and type(input_dict[i])!=list):
+            if(input_dict[i]==actual_data[i]):
+                print("Key : "+ str(i)+" Pass , Actual value : "+ str(actual_data[i]) + " , Expected Value : "+str(input_dict[i]))
+            else:
+                print("Key : "+ str(i)+" Fail , Actual value : "+ str(actual_data[i]) + " , Expected Value : "+str(input_dict[i]))
+        if(type(input_dict[i])==list):
+            list_fun(input_dict[i],actual_data[i])
+
+# List Validation 
+def list_fun(input_list,actual_data):
+    for i in input_list:
+        if(type(i)!=list):
+            if(i in actual_data):
+                print("Key : "+ str(i)+" Pass , Actual value : "+ str(i) + " , Expected Value : "+str(i))
+            else:
+                print("Key : "+ str(i)+" Fail , Actual value : "+ "Not Present" + " , Expected Value : "+str(i))
+        if(type(i)==list):
+            list_fun(i,i)
+
+# GCP Connectivity Validation
+try:
+
+    os.environ["GCLOUD_PROJECT"]="zeta-pivot-298701"
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="zeta-pivot-298701-6982c36d901d.json"
+
+    compute=build('compute', 'v1')
+    actual_value=compute.instances().list(project="zeta-pivot-298701",zone="us-central1-a").execute()
+    # To List All instance under define project
+    # print(actual_value["items"])
+except :
+    print("GCP Connectivity Issue")
+
+# Fetching details for a define instance
+try:  
+    file_data=open("input_gcp.json", "r")
+    input_data=eval(file_data.read())
+    #print(input_data)
+    print(actual_value)
+    # To Read Input File Data
+    # print(input_data)
+    for i in actual_value["items"]:        
+        if(i['id']==input_data["id"]):
+            temp=i
+        else:
+            raise Exception("Instance with id"+str(i)+"not configured")
+except:
+    print("Invalid Input File")
+
+try:
+    new_actual_value=temp  
+    for i in input_data:
+        # Data Type Dict
+        if(type(input_data[i])==dict):
+            dict_fun(input_data[i],new_actual_value[i])
+        #  Data Type List
+        if(type(input_data[i])==list):
+            list_fun(input_data[i],new_actual_value[i])
+        # Simple Data
+        else:
+            if(input_data[i]==new_actual_value[i]):
+                print("Key : "+ str(i)+" , Status: Pass , Actual value : "+ str(new_actual_value[i]) + " , Expected Value : "+str(input_data[i]))
+            else:
+                print("Key : "+ str(i)+" , Status: Fail , Actual value : "+ str(new_actual_value[i]) + " , Expected Value : "+str(input_data[i]))
+except:
+    print("Parameter Violation")
